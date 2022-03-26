@@ -63,23 +63,19 @@ export function update(req: Request, res: Response) {
 				cols += `profile_pic="${req.file.destination.slice(2)}", `;
 			}
 			for (let key in req.body) {
-				if (typeof req.body[key] == 'string') {
-					cols += `${key}="${req.body[key]}", `;
-					break;
-				}
-				cols += `${key} = ${req.body[key]}, `;
+				cols += `${key}="${req.body[key]}", `;
 			}
-
 			cols = cols.slice(0, cols.length - 2);
+			console.log(cols);
 			if (cols.length !== 0) {
 				sqlCon.query(
 					`update user set ${cols} where id=${id}`,
 					(err: any, result: any) => {
 						if (err) return res.status(400).json(err);
-						res.json({ msg: 'ok' });
 					}
 				);
 			}
+			res.json({ msg: 'ok' });
 		}
 	);
 }
@@ -89,10 +85,10 @@ export function list(req: Request, res: Response) {
 		'select role.name as role, user.* from user, role where user.role_id=role.id ';
 	if (s)
 		query += `, match(user.name, user.email, user.mobile) against ("${s}") `;
-	if (role_id) query += `, user.role_id="${role_id}" `;
+	if (role_id) query += `and user.role_id=${role_id} `;
 	if (limit) query += `limit ${limit} `;
 	if (skip) query += `offset ${skip} `;
-	if (orderby) query += `order by user.${orderby} `;
+	if (orderby) query += `order by ${orderby} `;
 	if (sortby) query += `${sortby} `;
 
 	const sqlCon = req.app.locals.sqlCon;
@@ -104,8 +100,11 @@ export function list(req: Request, res: Response) {
 export function getuser(req: Request, res: Response) {
 	const { id } = req.params;
 	const sqlCon = req.app.locals.sqlCon;
-	sqlCon.query(`select * from user where id`, (err: any, result: any) => {
-		if (err) return res.status(400).json(err);
-		res.json(result);
-	});
+	sqlCon.query(
+		`select role.name as role, user.* from user, role where user.role_id=role.id and user.id=${id}`,
+		(err: any, result: any) => {
+			if (err) return res.status(400).json(err);
+			res.json(result[0]);
+		}
+	);
 }

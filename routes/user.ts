@@ -9,5 +9,6 @@ route.post('/login', userController.login);
 route.post('/', userController.singup);
 route.get('/', userController.list);
 route.put('/:id', upload.single('profile_pic'), userController.update);
+route.get('/:id', userController.getuser);
 
 export default route;
