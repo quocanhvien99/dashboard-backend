@@ -39,4 +39,6 @@ app.locals.sqlCon = mysql.createConnection({
 
 app.use('/user', userRoute);
 
+app.use(express.static('./public'));
+
 app.listen(process.env.PORT || 3000);
