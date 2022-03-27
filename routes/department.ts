@@ -8,5 +8,6 @@ route.post('/', checkAdmin, departmentController.add);
 route.get('/', checkAdmin, departmentController.list);
 route.put('/:id', checkAdmin, departmentController.update);
 route.get('/:id', checkAdmin, departmentController.getdepartment);
+route.delete('/:id', checkAdmin, departmentController.remove);
 
 export default route;
