@@ -9,6 +9,7 @@ import 'dotenv/config';
 import { Pool } from 'pg';
 import mysql from 'mysql2';
 import userRoute from './routes/user';
+import departmentRoute from './routes/department';
 
 const app = express();
 
@@ -38,6 +39,7 @@ app.locals.sqlCon = mysql.createConnection({
 });
 
 app.use('/user', userRoute);
+app.use('/department', departmentRoute);
 
 app.use(express.static('./public'));
 

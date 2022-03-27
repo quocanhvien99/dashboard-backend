@@ -1,11 +1,12 @@
 import { Router } from 'express';
 import * as departmentController from '../controllers/department';
+import checkAdmin from '../middleware/checkAdmin';
 
 const route = Router();
 
-route.post('/', departmentController.add);
-route.get('/', departmentController.list);
-route.put('/:id', departmentController.update);
-route.get('/:id', departmentController.getdepartment);
+route.post('/', checkAdmin, departmentController.add);
+route.get('/', checkAdmin, departmentController.list);
+route.put('/:id', checkAdmin, departmentController.update);
+route.get('/:id', checkAdmin, departmentController.getdepartment);
 
 export default route;
