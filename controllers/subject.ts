@@ -2,9 +2,9 @@ import { Request, Response } from 'express';
 import mysql from 'mysql2';
 
 export function add(req: Request, res: Response) {
-	const { dname, dhead_id } = req.body;
+	const { name, did } = req.body;
 	const sqlCon: mysql.Connection = req.app.locals.sqlCon;
-	sqlCon.query(`insert into department(dname, dhead_id) values (?, ?)`, [dname, dhead_id], (err: any, result: any) => {
+	sqlCon.query(`insert into subject(name, did) values (?, ?)`, [name, did], (err: any, result: any) => {
 		if (err) return res.status(400).json(err);
 		res.json({ msg: 'ok' });
 	});
@@ -12,10 +12,15 @@ export function add(req: Request, res: Response) {
 export function remove(req: Request, res: Response) {
 	const { id } = req.params;
 	const { sqlCon } = req.app.locals;
-	sqlCon.query(`delete from department where id=?`, [id], (err: any, result: any) => {
-		if (err) return res.status(400).json(err);
-		res.json({ msg: 'ok' });
-	});
+	sqlCon.query(
+		`delete from subject where id=?`,
+		//@ts-ignore
+		[id, sqlCon.escape(req.session.uid)],
+		(err: any, result: any) => {
+			if (err) return res.status(400).json(err);
+			res.json({ msg: 'ok' });
+		}
+	);
 }
 export function update(req: Request, res: Response) {
 	const { id } = req.params;
@@ -27,10 +32,15 @@ export function update(req: Request, res: Response) {
 
 	cols = cols.slice(0, cols.length - 2);
 	if (cols.length !== 0) {
-		sqlCon.query(`update department set ${cols} where id=${sqlCon.escape(id)}`, (err: any, result: any) => {
-			if (err) return res.status(400).json(err);
-			return res.json({ msg: 'ok' });
-		});
+		sqlCon.query(
+			`update subject set ${cols} where id=?`,
+			//@ts-ignore
+			[id, sqlCon.escape(req.session.uid)],
+			(err: any, result: any) => {
+				if (err) return res.status(400).json(err);
+				return res.json({ msg: 'ok' });
+			}
+		);
 	} else {
 		res.json({ msg: 'ok' });
 	}
@@ -40,8 +50,11 @@ export function list(req: Request, res: Response) {
 
 	const sqlCon: mysql.Connection = req.app.locals.sqlCon;
 
-	let query = 'select D.id as id, dname, U.name as dhead from department as D left join user as D on D.dhead_id=U.id ';
-	if (s) query += `where D.name like "${sqlCon.escape(`%${s}%`)}" `;
+	let query = `select S.id, S.name, D.name from subject as S, department as D where S.did=D.id and dhead_id=${sqlCon.escape(
+		//@ts-ignore
+		req.session.uid
+	)} `;
+	if (s) query += `and name like "${sqlCon.escape(`%${s}%`)}" `;
 	if (sortby) query += `order by ${sortby} `;
 	if (orderby) query += `${orderby} `;
 	if (limit) query += `limit ${parseInt(limit as string)} `;
@@ -51,11 +64,11 @@ export function list(req: Request, res: Response) {
 		res.json(result);
 	});
 }
-export function getdepartment(req: Request, res: Response) {
+export function getsubject(req: Request, res: Response) {
 	const { id } = req.params;
 	const sqlCon: mysql.Connection = req.app.locals.sqlCon;
 	sqlCon.query(
-		`select D.id as id, dname, U.name as dhead from user as U, department as D where D.id=? and D.dhead_id=U.id`,
+		`select S.id, S.name, D.name as dname from subject as S, deparment as D where S.id=? and S.did=D.id`,
 		[id],
 		(err: any, result: any) => {
 			if (err) return res.status(400).json(err);

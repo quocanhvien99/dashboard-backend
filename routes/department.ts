@@ -1,13 +1,13 @@
 import { Router } from 'express';
 import * as departmentController from '../controllers/department';
-import checkAdmin from '../middleware/checkAdmin';
+import isAdmin from '../middleware/isAdmin';
 
 const route = Router();
 
-route.post('/', checkAdmin, departmentController.add);
-route.get('/', checkAdmin, departmentController.list);
-route.put('/:id', checkAdmin, departmentController.update);
-route.get('/:id', checkAdmin, departmentController.getdepartment);
-route.delete('/:id', checkAdmin, departmentController.remove);
+route.post('/', isAdmin, departmentController.add);
+route.get('/', isAdmin, departmentController.list);
+route.put('/:id', isAdmin, departmentController.update);
+route.get('/:id', isAdmin, departmentController.getdepartment);
+route.delete('/:id', isAdmin, departmentController.remove);
 
 export default route;
