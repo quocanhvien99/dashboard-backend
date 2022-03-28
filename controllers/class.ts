@@ -95,16 +95,17 @@ export function listMember(req: Request, res: Response) {
 	});
 }
 export function addTime(req: Request, res: Response) {
-	const { cid, start, end } = req.body;
+	const { start, end } = req.body;
+	const cid = req.params.id;
 	const sqlCon: mysql.Connection = req.app.locals.sqlCon;
 	//ktra trùng lịch dạy
 	sqlCon.query(
-		'select * from class_time as CT, class as C where CT.cid=C.id and C.teacher_id=? and ((? between C.start and C.end) or (? between C.start and C.end))',
+		'select * from class_time as CT, class as C where CT.cid=C.id and C.teacher_id=? and ((? between CT.start and CT.end) or (? between CT.start and CT.end))',
 		//@ts-ignore
 		[req.session.uid, start, end],
 		(err: any, result: any) => {
 			if (err) return res.status(400).json(err);
-			if (!result.length) return res.status(400).json({ error: 'Trùng lịch dạy' });
+			if (result.length) return res.status(400).json({ error: 'Trùng lịch dạy' });
 			sqlCon.query(
 				'insert into class_time(start, end, cid) values (?, ?, ?)',
 				[start, end, cid],

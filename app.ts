@@ -8,6 +8,8 @@ import 'dotenv/config';
 import mysql from 'mysql2';
 import userRoute from './routes/user';
 import departmentRoute from './routes/department';
+import classRoute from './routes/class';
+import subjectRoute from './routes/subject';
 
 const app = express();
 
@@ -38,6 +40,8 @@ app.locals.sqlCon = mysql.createConnection({
 
 app.use('/user', userRoute);
 app.use('/department', departmentRoute);
+app.use('/subject', subjectRoute);
+app.use('/class', classRoute);
 
 app.use(express.static('./public'));
 

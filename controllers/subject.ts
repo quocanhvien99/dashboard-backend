@@ -2,9 +2,9 @@ import { Request, Response } from 'express';
 import mysql from 'mysql2';
 
 export function add(req: Request, res: Response) {
-	const { name, did } = req.body;
+	const { name, sid, did } = req.body;
 	const sqlCon: mysql.Connection = req.app.locals.sqlCon;
-	sqlCon.query(`insert into subject(name, did) values (?, ?)`, [name, did], (err: any, result: any) => {
+	sqlCon.query(`insert into subject(id, name, did) values (?, ?, ?)`, [sid, name, did], (err: any, result: any) => {
 		if (err) return res.status(400).json(err);
 		res.json({ msg: 'ok' });
 	});
