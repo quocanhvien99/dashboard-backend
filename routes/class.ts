@@ -12,7 +12,7 @@ route.post('/:id/member/', classMiddleware.teacher, classController.addMember);
 route.get('/:id/member', classMiddleware.teacher, classController.listMember);
 route.delete('/:id/member/:sid', classMiddleware.teacher, classController.removeMember);
 route.post('/:id/time/', classMiddleware.teacher, classController.addTime);
-route.get('/:id/time/', classMiddleware.teacher, classController.listTime);
+route.get('/:id/time/', classController.listTime);
 route.delete('/:id/time/:tid', classMiddleware.teacher, classController.removeTime);
 
 export default route;
