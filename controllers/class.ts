@@ -47,17 +47,38 @@ export function update(req: Request, res: Response) {
 	}
 }
 export function listClass(req: Request, res: Response) {
-	// let { skip, limit, orderby, sortby } = req.query;
-	// const sqlCon: mysql.Connection = req.app.locals.sqlCon;
-	// let query = `select * from  `;
-	// if (sortby) query += `order by ${sortby} `;
-	// if (orderby) query += `${orderby} `;
-	// if (limit) query += `limit ${parseInt(limit as string)} `;
-	// if (skip) query += `offset ${parseInt(skip as string)} `;
-	// sqlCon.query(query, (err: any, result: any) => {
-	// 	if (err) return res.status(400).json(err);
-	// 	res.json(result);
-	// });
+	let { skip, limit, orderby, sortby } = req.query;
+
+	const sqlCon: mysql.Connection = req.app.locals.sqlCon;
+	//@ts-ignore
+	sqlCon.query(
+		'select r.name as role from user u, role r where u.id=? and u.role_id=role.id',
+		//@ts-ignore
+		[req.session.uid],
+		(err: any, result: any) => {
+			if (err) return res.status(400).json(err);
+			let query = '';
+			if (result[0].role == 'teacher')
+				query = `select c.id as id, s.name as sname, u.name as tname from class c, subject s, user u where c.teacher_id=${sqlCon.escape(
+					//@ts-ignore
+					req.session.uid
+				)} and c.sid=s.id and c.teacher_id=u.id `;
+			if (result[0].role == 'student')
+				query = `select c.id as id, s.name as sname, u.name as tname from class c, subject s, user u, class_member cm where cm.sid=${sqlCon.escape(
+					//@ts-ignore
+					req.session.uid
+				)} and c.sid=s.id and c.teacher_id=u.id and cm.cid=c.id  `;
+			if (query.length == 0) return res.sendStatus(403);
+			if (sortby) query += `order by ${sortby} `;
+			if (orderby) query += `${orderby} `;
+			if (limit) query += `limit ${parseInt(limit as string)} `;
+			if (skip) query += `offset ${parseInt(skip as string)} `;
+			sqlCon.query(query, (err: any, result: any) => {
+				if (err) return res.status(400).json(err);
+				res.json(result);
+			});
+		}
+	);
 }
 //class teacher
 export function addMember(req: Request, res: Response) {
@@ -118,14 +139,14 @@ export function addTime(req: Request, res: Response) {
 	);
 }
 export function listTime(req: Request, res: Response) {
-	let { skip, limit, orderby, sortby } = req.query;
+	let { skip, limit, start, end } = req.query;
 	let { id } = req.params;
 
 	const sqlCon: mysql.Connection = req.app.locals.sqlCon;
 
 	let query = `select * from class_time where cid=${sqlCon.escape(id)} `;
-	if (sortby) query += `order by ${sortby} `;
-	if (orderby) query += `${orderby} `;
+	if (start) query += `and start >= ${sqlCon.escape(start)} `;
+	if (end) query += `and end <= ${end} `;
 	if (limit) query += `limit ${parseInt(limit as string)} `;
 	if (skip) query += `offset ${parseInt(skip as string)} `;
 	sqlCon.query(query, (err: any, result: any) => {

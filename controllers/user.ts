@@ -3,15 +3,15 @@ import bcrypt from 'bcrypt';
 import mysql from 'mysql2';
 
 export function singup(req: Request, res: Response) {
-	const { email, password, role_id, name } = req.body;
+	const { email, password, role, name } = req.body;
 	const sqlCon: mysql.Connection = req.app.locals.sqlCon;
 	const hashedPass = bcrypt.hashSync(password, 10);
-	const data = [email, hashedPass, role_id, name];
+	const data = [email, hashedPass, role, name];
 	sqlCon.query(`select * from user where email=?`, email, (err: any, result: any) => {
 		if (err) return res.status(400).json(err);
-		if (result.length != 0) return res.json({ msg: 'Tài khoản đã tồn tại' });
+		if (result.length != 0) return res.status(400).json({ msg: 'Tài khoản đã tồn tại' });
 		sqlCon.query(
-			'insert into `user`(email, password, role_id, name) values (?, ?, ?, ?)',
+			'insert into `user`(email, password, role, name) values (?, ?, ?, ?)',
 			data,
 			(err: any, result: any) => {
 				if (err) return res.status(400).json(err);
@@ -23,19 +23,15 @@ export function singup(req: Request, res: Response) {
 export function login(req: Request, res: Response) {
 	const { email, password } = req.body;
 	const sqlCon = req.app.locals.sqlCon;
-	sqlCon.query(
-		'select role.name as role, user.* from user, role where email=? and user.role_id=role.id ',
-		[email],
-		(err: any, result: any) => {
-			if (err) return res.status(400).json(err);
-			if (result.length == 0 || !bcrypt.compareSync(password, result[0].password)) {
-				return res.status(400).json({ msg: 'Thông tin đăng nhập không chính xác.' });
-			}
-			//@ts-ignore
-			req.session.uid = result[0].id;
-			res.json({ msg: 'ok' });
+	sqlCon.query('select * from user where email=? ', [email], (err: any, result: any) => {
+		if (err) return res.status(400).json(err);
+		if (result.length == 0 || !bcrypt.compareSync(password, result[0].password)) {
+			return res.status(400).json({ msg: 'Thông tin đăng nhập không chính xác.' });
 		}
-	);
+		//@ts-ignore
+		req.session.uid = result[0].id;
+		res.json(result[0]);
+	});
 }
 export function logout(req: Request, res: Response) {
 	req.session.destroy((err) => {
@@ -48,7 +44,7 @@ export function update(req: Request, res: Response) {
 	if (!id) return res.json({});
 	const sqlCon: mysql.Connection = req.app.locals.sqlCon;
 	sqlCon.query(
-		'select user.id, role.name as role from user, role where user.id=? and user.role_id=role.id', //@ts-ignore
+		'select id, role from user where id=?', //@ts-ignore
 		[req.session.uid],
 		async (err: any, result: any) => {
 			if (err) return res.status(400).json(err);
@@ -76,12 +72,14 @@ export function update(req: Request, res: Response) {
 	);
 }
 export function list(req: Request, res: Response) {
-	let { s, skip, limit, orderby, sortby, role_id } = req.query;
+	let { s, skip, limit, orderby, sortby, role } = req.query;
 
 	const sqlCon: mysql.Connection = req.app.locals.sqlCon;
-	let query = 'select role.name as role, user.* from user, role where user.role_id=role.id ';
-	if (s) query += `and match(user.name, user.email, user.phone) against (${sqlCon.escape(s)}) `;
-	if (role_id) query += `and user.role_id=${sqlCon.escape(role_id)} `;
+	let query = 'select * from user ';
+	if (role || s) query += 'where ';
+	if (s) query += `match(name, email, phone) against (${sqlCon.escape(s)}) `;
+	if (role && s) query += 'and ';
+	if (role) query += `role=${sqlCon.escape(role)} `;
 	if (sortby) query += `order by ${sortby} `;
 	if (orderby) query += `${orderby} `;
 	if (limit) query += `limit ${parseInt(limit as string)} `;
@@ -95,12 +93,8 @@ export function list(req: Request, res: Response) {
 export function getuser(req: Request, res: Response) {
 	const { id } = req.params;
 	const sqlCon: mysql.Connection = req.app.locals.sqlCon;
-	sqlCon.query(
-		`select role.name as role, user.* from user, role where user.role_id=role.id and user.id=?`,
-		[id],
-		(err: any, result: any) => {
-			if (err) return res.status(400).json(err);
-			res.json(result[0]);
-		}
-	);
+	sqlCon.query(`select * from user where id=?`, [id], (err: any, result: any) => {
+		if (err) return res.status(400).json(err);
+		res.json(result[0]);
+	});
 }

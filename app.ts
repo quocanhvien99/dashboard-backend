@@ -1,7 +1,6 @@
 import express from 'express';
 import session from 'express-session';
 import cookieParser from 'cookie-parser';
-import cors from 'cors';
 import Redis from 'ioredis';
 import connectRedis from 'connect-redis';
 import 'dotenv/config';
@@ -10,6 +9,7 @@ import userRoute from './routes/user';
 import departmentRoute from './routes/department';
 import classRoute from './routes/class';
 import subjectRoute from './routes/subject';
+import cors from 'cors';
 
 const app = express();
 
@@ -26,7 +26,12 @@ app.use(
 	})
 );
 
-app.use(cors());
+app.use(
+	cors({
+		origin: 'http://localhost:3000',
+		credentials: true,
+	})
+);
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(cookieParser());
