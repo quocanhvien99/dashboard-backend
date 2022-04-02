@@ -44,7 +44,7 @@ export function update(req: Request, res: Response) {
 	if (!id) return res.json({});
 	const sqlCon: mysql.Connection = req.app.locals.sqlCon;
 	sqlCon.query(
-		'select id, role from user where id=?', //@ts-ignore
+		'select id, role, password from user where id=?', //@ts-ignore
 		[req.session.uid],
 		async (err: any, result: any) => {
 			if (err) return res.status(400).json(err);
@@ -57,7 +57,23 @@ export function update(req: Request, res: Response) {
 				cols += `profile_pic="/img/${req.file.filename}", `;
 			}
 			for (let key in req.body) {
-				cols += `${key}=${sqlCon.escape(req.body[key])}, `;
+				let value: string;
+				//change password
+				if (key == 'oldPassword') continue;
+				if (key == 'password') {
+					const { oldPassword, password } = req.body;
+					if (
+						result[0].role !== 'admin' && //@ts-ignore
+						(id !== req.session.uid || !bcrypt.compareSync(oldPassword, result[0].password))
+					) {
+						return res.status(403).json({ msg: 'Thông tin không chính xác!' });
+					}
+					value = sqlCon.escape(bcrypt.hashSync(password, 10));
+				} else {
+					value = sqlCon.escape(req.body[key]);
+				}
+
+				cols += `${key}=${value}, `;
 			}
 			cols = cols.slice(0, cols.length - 2);
 			if (cols.length !== 0) {
@@ -93,8 +109,23 @@ export function list(req: Request, res: Response) {
 export function getuser(req: Request, res: Response) {
 	const { id } = req.params;
 	const sqlCon: mysql.Connection = req.app.locals.sqlCon;
-	sqlCon.query(`select * from user where id=?`, [id], (err: any, result: any) => {
-		if (err) return res.status(400).json(err);
-		res.json(result[0]);
-	});
+	sqlCon.query(
+		'select id, role from user where id=?', //@ts-ignore
+		[req.session.uid],
+		(err: any, result: any) => {
+			if (err) return res.status(400).json(err);
+			//@ts-ignore
+			if (result[0].role != 'admin' && id != req.session.uid) {
+				return res.sendStatus(403);
+			}
+			sqlCon.query(
+				`select id, name, dob, email, phone, gender, profile_pic, role from user where id=?`,
+				[id],
+				(err: any, result: any) => {
+					if (err) return res.status(400).json(err);
+					res.json(result[0]);
+				}
+			);
+		}
+	);
 }
