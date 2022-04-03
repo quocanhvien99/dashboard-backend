@@ -3,21 +3,34 @@ import bcrypt from 'bcrypt';
 import mysql from 'mysql2';
 
 export function singup(req: Request, res: Response) {
-	const { email, password, role, name } = req.body;
+	const { email } = req.body;
+
 	const sqlCon: mysql.Connection = req.app.locals.sqlCon;
-	const hashedPass = bcrypt.hashSync(password, 10);
-	const data = [email, hashedPass, role, name];
 	sqlCon.query(`select * from user where email=?`, email, (err: any, result: any) => {
 		if (err) return res.status(400).json(err);
 		if (result.length != 0) return res.status(400).json({ msg: 'Tài khoản đã tồn tại' });
-		sqlCon.query(
-			'insert into `user`(email, password, role, name) values (?, ?, ?, ?)',
-			data,
-			(err: any, result: any) => {
-				if (err) return res.status(400).json(err);
-				res.status(201).json({ msg: 'ok' });
+
+		const hashedPass = bcrypt.hashSync(req.body.password, 10);
+		let fields: string[] = [];
+		let values: string[] = [];
+		for (const [key, value] of Object.entries(req.body)) {
+			if (!value) continue;
+			fields.push(key);
+			if (key == 'password') {
+				values.push(sqlCon.escape(hashedPass));
+				continue;
 			}
-		);
+			values.push(sqlCon.escape(value));
+		}
+		if (req.file) {
+			fields.push('profile_pic');
+			values.push(sqlCon.escape(`/img/profile/${req.file.filename}`));
+		}
+
+		sqlCon.query(`insert into user(${fields.join(',')}) values (${values.join(',')})`, (err: any, result: any) => {
+			if (err) return res.status(400).json(err);
+			res.status(201).json({ msg: 'ok' });
+		});
 	});
 }
 export function login(req: Request, res: Response) {
@@ -54,7 +67,7 @@ export function update(req: Request, res: Response) {
 			}
 			let cols = '';
 			if (req.file) {
-				cols += `profile_pic="/img/${req.file.filename}", `;
+				cols += `profile_pic="/img/profile/${req.file.filename}", `;
 			}
 			for (let key in req.body) {
 				let value: string;
