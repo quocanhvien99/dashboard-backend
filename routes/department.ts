@@ -5,7 +5,7 @@ import isAdmin from '../middleware/isAdmin';
 const route = Router();
 
 route.post('/', isAdmin, departmentController.add);
-route.get('/', isAdmin, departmentController.list);
+route.get('/', departmentController.list);
 route.put('/:id', isAdmin, departmentController.update);
 route.get('/:id', isAdmin, departmentController.getdepartment);
 route.delete('/:id', isAdmin, departmentController.remove);

@@ -4,6 +4,7 @@ import mysql from 'mysql2';
 export default (req: Request, res: Response, next: NextFunction) => {
 	const { did } = req.body;
 	const { id } = req.params;
+	if (!did && !id) return next();
 	const sqlCon: mysql.Connection = req.app.locals.sqlCon;
 	const query = did
 		? 'select id from department where id=? and dhead_id=?'

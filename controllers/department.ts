@@ -3,7 +3,6 @@ import mysql from 'mysql2';
 
 export function add(req: Request, res: Response) {
 	const { dname, dhead_id } = req.body;
-	console.log(req.body);
 	const sqlCon: mysql.Connection = req.app.locals.sqlCon;
 	sqlCon.query(`insert into department(dname, dhead_id) values (?, ?)`, [dname, dhead_id], (err: any, result: any) => {
 		if (err) return res.status(400).json(err);
@@ -37,21 +36,28 @@ export function update(req: Request, res: Response) {
 	}
 }
 export function list(req: Request, res: Response) {
-	let { s, skip, limit, orderby, sortby } = req.query;
-
 	const sqlCon: mysql.Connection = req.app.locals.sqlCon;
-
-	let query =
-		'select count(*) OVER() as total, D.id as id, dname, U.name as dhead from department as D left join user as U on D.dhead_id=U.id ';
-	if (s) query += `where D.name like "${sqlCon.escape(`%${s}%`)}" `;
-	if (sortby) query += `order by ${sortby} `;
-	if (orderby) query += `${orderby} `;
-	if (limit) query += `limit ${parseInt(limit as string)} `;
-	if (skip) query += `offset ${parseInt(skip as string)} `;
-	sqlCon.query(query, (err: any, result: any) => {
-		if (err) return res.status(400).json(err);
-		res.json(result);
-	});
+	if (req.session.role == 'admin') {
+		let { s, skip, limit, orderby, sortby } = req.query;
+		let query =
+			'select count(*) OVER() as total, D.id as id, dname, U.name as dhead from department as D left join user as U on D.dhead_id=U.id ';
+		if (s) query += `where D.name like "${sqlCon.escape(`%${s}%`)}" `;
+		if (sortby) query += `order by ${sortby} `;
+		if (orderby) query += `${orderby} `;
+		if (limit) query += `limit ${parseInt(limit as string)} `;
+		if (skip) query += `offset ${parseInt(skip as string)} `;
+		sqlCon.query(query, (err: any, result: any) => {
+			if (err) return res.status(400).json(err);
+			res.json(result);
+		});
+	} else if (req.session.role == 'teacher') {
+		sqlCon.query('select * from department where dhead_id=?', [req.session.uid], (err: any, result: any) => {
+			if (err) return res.status(400).json(err);
+			res.json(result);
+		});
+	} else {
+		res.sendStatus(403);
+	}
 }
 export function getdepartment(req: Request, res: Response) {
 	const { id } = req.params;

@@ -9,7 +9,6 @@ export function teacher(req: Request, res: Response, next: NextFunction) {
 		if (err) return res.status(400).json(err);
 		if (!result.length) return res.status(403);
 
-		console.log('dsfdsf1');
 		next();
 	});
 }

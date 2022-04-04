@@ -2,9 +2,9 @@ import { Request, Response } from 'express';
 import mysql from 'mysql2';
 
 export function add(req: Request, res: Response) {
-	const { name, sid, did } = req.body;
+	const { name, id, did } = req.body;
 	const sqlCon: mysql.Connection = req.app.locals.sqlCon;
-	sqlCon.query(`insert into subject(id, name, did) values (?, ?, ?)`, [sid, name, did], (err: any, result: any) => {
+	sqlCon.query(`insert into subject(id, name, did) values (?, ?, ?)`, [id, name, did], (err: any, result: any) => {
 		if (err) return res.status(400).json(err);
 		res.json({ msg: 'ok' });
 	});
@@ -50,7 +50,7 @@ export function list(req: Request, res: Response) {
 
 	const sqlCon: mysql.Connection = req.app.locals.sqlCon;
 
-	let query = `select S.id, S.name, D.name from subject as S, department as D where S.did=D.id and dhead_id=${sqlCon.escape(
+	let query = `select count(*) OVER() as total, S.id, S.name, D.dname from subject as S, department as D where S.did=D.id and dhead_id=${sqlCon.escape(
 		//@ts-ignore
 		req.session.uid
 	)} `;
@@ -68,7 +68,7 @@ export function getsubject(req: Request, res: Response) {
 	const { id } = req.params;
 	const sqlCon: mysql.Connection = req.app.locals.sqlCon;
 	sqlCon.query(
-		`select S.id, S.name, D.name as dname from subject as S, deparment as D where S.id=? and S.did=D.id`,
+		`select S.id, S.name, D.dname as dname from subject as S, department as D where S.id=? and S.did=D.id`,
 		[id],
 		(err: any, result: any) => {
 			if (err) return res.status(400).json(err);

@@ -41,8 +41,8 @@ export function login(req: Request, res: Response) {
 		if (result.length == 0 || !bcrypt.compareSync(password, result[0].password)) {
 			return res.status(400).json({ msg: 'Thông tin đăng nhập không chính xác.' });
 		}
-		//@ts-ignore
 		req.session.uid = result[0].id;
+		req.session.role = result[0].role;
 		res.json(result[0]);
 	});
 }
@@ -55,50 +55,42 @@ export function logout(req: Request, res: Response) {
 export function update(req: Request, res: Response) {
 	const { id } = req.params;
 	if (!id) return res.json({});
-	const sqlCon: mysql.Connection = req.app.locals.sqlCon;
-	sqlCon.query(
-		'select id, role, password from user where id=?', //@ts-ignore
-		[req.session.uid],
-		async (err: any, result: any) => {
-			if (err) return res.status(400).json(err);
-			//@ts-ignore
-			if (result[0].role != 'admin' && id != req.session.uid) {
-				return res.sendStatus(403);
+	if (req.session.role != 'admin' && id != req.session.uid) {
+		return res.sendStatus(403);
+	}
+	const sqlCon = req.app.locals.sqlCon;
+	let cols = '';
+	if (req.file) {
+		cols += `profile_pic="/img/profile/${req.file.filename}", `;
+	}
+	for (let key in req.body) {
+		let value: string;
+		//change password
+		if (key == 'oldPassword') continue;
+		if (key == 'password') {
+			const { oldPassword, password } = req.body;
+			if (
+				req.session.role !== 'admin' && //@ts-ignore
+				(id !== req.session.uid || !bcrypt.compareSync(oldPassword, result[0].password))
+			) {
+				return res.status(403).json({ msg: 'Thông tin không chính xác!' });
 			}
-			let cols = '';
-			if (req.file) {
-				cols += `profile_pic="/img/profile/${req.file.filename}", `;
-			}
-			for (let key in req.body) {
-				let value: string;
-				//change password
-				if (key == 'oldPassword') continue;
-				if (key == 'password') {
-					const { oldPassword, password } = req.body;
-					if (
-						result[0].role !== 'admin' && //@ts-ignore
-						(id !== req.session.uid || !bcrypt.compareSync(oldPassword, result[0].password))
-					) {
-						return res.status(403).json({ msg: 'Thông tin không chính xác!' });
-					}
-					value = sqlCon.escape(bcrypt.hashSync(password, 10));
-				} else {
-					value = sqlCon.escape(req.body[key]);
-				}
-
-				cols += `${key}=${value}, `;
-			}
-			cols = cols.slice(0, cols.length - 2);
-			if (cols.length !== 0) {
-				sqlCon.query(`update user set ${cols} where id=${sqlCon.escape(id)}`, (err: any, result: any) => {
-					if (err) return res.status(400).json(err);
-					return res.json({ msg: 'ok' });
-				});
-			} else {
-				res.json({ msg: 'ok' });
-			}
+			value = sqlCon.escape(bcrypt.hashSync(password, 10));
+		} else {
+			value = sqlCon.escape(req.body[key]);
 		}
-	);
+
+		cols += `${key}=${value}, `;
+	}
+	cols = cols.slice(0, cols.length - 2);
+	if (cols.length !== 0) {
+		sqlCon.query(`update user set ${cols} where id=${sqlCon.escape(id)}`, (err: any, result: any) => {
+			if (err) return res.status(400).json(err);
+			return res.json({ msg: 'ok' });
+		});
+	} else {
+		res.json({ msg: 'ok' });
+	}
 }
 export function list(req: Request, res: Response) {
 	let { s, skip, limit, orderby, sortby, role } = req.query;
@@ -123,42 +115,26 @@ export function list(req: Request, res: Response) {
 export function getuser(req: Request, res: Response) {
 	const { id } = req.params;
 	const sqlCon: mysql.Connection = req.app.locals.sqlCon;
+	if (req.session.role != 'admin' && id != req.session.uid) {
+		return res.sendStatus(403);
+	}
 	sqlCon.query(
-		'select id, role from user where id=?', //@ts-ignore
-		[req.session.uid],
+		`select id, name, dob, email, phone, gender, profile_pic, role, address, city, state, country, zip from user where id=?`,
+		[id],
 		(err: any, result: any) => {
 			if (err) return res.status(400).json(err);
-			//@ts-ignore
-			if (result[0].role != 'admin' && id != req.session.uid) {
-				return res.sendStatus(403);
-			}
-			sqlCon.query(
-				`select id, name, dob, email, phone, gender, profile_pic, role, address, city, state, country, zip from user where id=?`,
-				[id],
-				(err: any, result: any) => {
-					if (err) return res.status(400).json(err);
-					res.json(result[0]);
-				}
-			);
+			res.json(result[0]);
 		}
 	);
 }
 export function removeuser(req: Request, res: Response) {
 	const { id } = req.params;
 	const sqlCon: mysql.Connection = req.app.locals.sqlCon;
-	sqlCon.query(
-		'select id, role from user where id=?', //@ts-ignore
-		[req.session.uid],
-		(err: any, result: any) => {
-			if (err) return res.status(400).json(err);
-			//@ts-ignore
-			if (result[0].role != 'admin' && id != req.session.uid) {
-				return res.sendStatus(403);
-			}
-			sqlCon.query(`delete from user where id=?`, [id], (err: any, result: any) => {
-				if (err) return res.status(400).json(err);
-				res.json({ msg: 'ok' });
-			});
-		}
-	);
+	if (req.session.role != 'admin' && id != req.session.uid) {
+		return res.sendStatus(403);
+	}
+	sqlCon.query(`delete from user where id=?`, [id], (err: any, result: any) => {
+		if (err) return res.status(400).json(err);
+		res.json({ msg: 'ok' });
+	});
 }

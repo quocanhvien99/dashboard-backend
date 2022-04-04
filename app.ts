@@ -11,6 +11,13 @@ import classRoute from './routes/class';
 import subjectRoute from './routes/subject';
 import cors from 'cors';
 
+declare module 'express-session' {
+	export interface SessionData {
+		uid: string;
+		role: string;
+	}
+}
+
 const app = express();
 
 const RedisStore = connectRedis(session);
