@@ -3,6 +3,7 @@ import mysql from 'mysql2';
 
 export function add(req: Request, res: Response) {
 	const { dname, dhead_id } = req.body;
+	console.log(req.body);
 	const sqlCon: mysql.Connection = req.app.locals.sqlCon;
 	sqlCon.query(`insert into department(dname, dhead_id) values (?, ?)`, [dname, dhead_id], (err: any, result: any) => {
 		if (err) return res.status(400).json(err);
@@ -40,7 +41,8 @@ export function list(req: Request, res: Response) {
 
 	const sqlCon: mysql.Connection = req.app.locals.sqlCon;
 
-	let query = 'select D.id as id, dname, U.name as dhead from department as D left join user as D on D.dhead_id=U.id ';
+	let query =
+		'select count(*) OVER() as total, D.id as id, dname, U.name as dhead from department as D left join user as U on D.dhead_id=U.id ';
 	if (s) query += `where D.name like "${sqlCon.escape(`%${s}%`)}" `;
 	if (sortby) query += `order by ${sortby} `;
 	if (orderby) query += `${orderby} `;
@@ -55,7 +57,7 @@ export function getdepartment(req: Request, res: Response) {
 	const { id } = req.params;
 	const sqlCon: mysql.Connection = req.app.locals.sqlCon;
 	sqlCon.query(
-		`select D.id as id, dname, U.name as dhead from user as U, department as D where D.id=? and D.dhead_id=U.id`,
+		`select dname, U.name as dhead, D.* from user as U, department as D where D.id=? and D.dhead_id=U.id`,
 		[id],
 		(err: any, result: any) => {
 			if (err) return res.status(400).json(err);

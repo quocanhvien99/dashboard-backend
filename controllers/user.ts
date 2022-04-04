@@ -104,9 +104,10 @@ export function list(req: Request, res: Response) {
 	let { s, skip, limit, orderby, sortby, role } = req.query;
 
 	const sqlCon: mysql.Connection = req.app.locals.sqlCon;
-	let query = 'select * from user ';
+	let query = 'select count(*) OVER() as total,user.* from user ';
 	if (role || s) query += 'where ';
-	if (s) query += `match(name, email, phone) against (${sqlCon.escape(s)}) `;
+	//if (s) query += `match(name, email, phone) against (${sqlCon.escape(s)}) `;
+	if (s) query += `name like (${sqlCon.escape(`%${s}%`)}) `;
 	if (role && s) query += 'and ';
 	if (role) query += `role=${sqlCon.escape(role)} `;
 	if (sortby) query += `order by ${sortby} `;
@@ -132,13 +133,32 @@ export function getuser(req: Request, res: Response) {
 				return res.sendStatus(403);
 			}
 			sqlCon.query(
-				`select id, name, dob, email, phone, gender, profile_pic, role from user where id=?`,
+				`select id, name, dob, email, phone, gender, profile_pic, role, address, city, state, country, zip from user where id=?`,
 				[id],
 				(err: any, result: any) => {
 					if (err) return res.status(400).json(err);
 					res.json(result[0]);
 				}
 			);
+		}
+	);
+}
+export function removeuser(req: Request, res: Response) {
+	const { id } = req.params;
+	const sqlCon: mysql.Connection = req.app.locals.sqlCon;
+	sqlCon.query(
+		'select id, role from user where id=?', //@ts-ignore
+		[req.session.uid],
+		(err: any, result: any) => {
+			if (err) return res.status(400).json(err);
+			//@ts-ignore
+			if (result[0].role != 'admin' && id != req.session.uid) {
+				return res.sendStatus(403);
+			}
+			sqlCon.query(`delete from user where id=?`, [id], (err: any, result: any) => {
+				if (err) return res.status(400).json(err);
+				res.json({ msg: 'ok' });
+			});
 		}
 	);
 }
