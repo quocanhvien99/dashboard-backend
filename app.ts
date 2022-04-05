@@ -8,6 +8,7 @@ import mysql from 'mysql2';
 import userRoute from './routes/user';
 import departmentRoute from './routes/department';
 import classRoute from './routes/class';
+import scoreRoute from './routes/score';
 import subjectRoute from './routes/subject';
 import cors from 'cors';
 
@@ -54,6 +55,7 @@ app.use('/user', userRoute);
 app.use('/department', departmentRoute);
 app.use('/subject', subjectRoute);
 app.use('/class', classRoute);
+app.use('/score', scoreRoute);
 
 app.use(express.static('./public'));
 

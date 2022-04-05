@@ -3,12 +3,16 @@ import mysql from 'mysql2';
 
 //head department
 export function add(req: Request, res: Response) {
-	const { sid, teacher_id } = req.body;
+	const { sid, teacher_id, semester } = req.body;
 	const sqlCon: mysql.Connection = req.app.locals.sqlCon;
-	sqlCon.query(`insert into class(sid, teacher_id) values (?, ?)`, [sid, teacher_id], (err: any, result: any) => {
-		if (err) return res.status(400).json(err);
-		res.json({ msg: 'ok' });
-	});
+	sqlCon.query(
+		`insert into class(sid, teacher_id, semester) values (?, ?, ?)`,
+		[sid, teacher_id, semester],
+		(err: any, result: any) => {
+			if (err) return res.status(400).json(err);
+			res.json({ msg: 'ok' });
+		}
+	);
 }
 export function remove(req: Request, res: Response) {
 	const { id } = req.params;
@@ -47,45 +51,43 @@ export function update(req: Request, res: Response) {
 	}
 }
 export function listClass(req: Request, res: Response) {
-	let { skip, limit, orderby, sortby } = req.query;
+	let { skip, limit, orderby, sortby, sid } = req.query;
 
 	const sqlCon: mysql.Connection = req.app.locals.sqlCon;
-	//@ts-ignore
-	sqlCon.query(
-		'select r.name as role from user u, role r where u.id=? and u.role_id=role.id',
-		//@ts-ignore
-		[req.session.uid],
-		(err: any, result: any) => {
-			if (err) return res.status(400).json(err);
-			let query = '';
-			if (result[0].role == 'teacher')
-				query = `select c.id as id, s.name as sname, u.name as tname from class c, subject s, user u where c.teacher_id=${sqlCon.escape(
-					//@ts-ignore
-					req.session.uid
-				)} and c.sid=s.id and c.teacher_id=u.id `;
-			if (result[0].role == 'student')
-				query = `select c.id as id, s.name as sname, u.name as tname from class c, subject s, user u, class_member cm where cm.sid=${sqlCon.escape(
-					//@ts-ignore
-					req.session.uid
-				)} and c.sid=s.id and c.teacher_id=u.id and cm.cid=c.id  `;
-			if (query.length == 0) return res.sendStatus(403);
-			if (sortby) query += `order by ${sortby} `;
-			if (orderby) query += `${orderby} `;
-			if (limit) query += `limit ${parseInt(limit as string)} `;
-			if (skip) query += `offset ${parseInt(skip as string)} `;
-			sqlCon.query(query, (err: any, result: any) => {
-				if (err) return res.status(400).json(err);
-				res.json(result);
-			});
+	let query = '';
+	if (req.session.role == 'teacher')
+		if (sid)
+			query = `select count(*) OVER() as total, c.id, c.semester,u.name as tname from class c, user u where c.teacher_id=u.id and c.sid=${sqlCon.escape(
+				sid
+			)} `;
+		else {
+			query = `select count(*) OVER() as total, c.id, c.semester,s.name sname, u.name tname, d.dname dname from class c, subject s, user u, department d where c.teacher_id=${sqlCon.escape(
+				//@ts-ignore
+				req.session.uid
+			)} and c.sid=s.id and c.teacher_id=u.id and s.did=d.id `;
 		}
-	);
+	if (req.session.role == 'student')
+		query = `select count(*) OVER() as total, c.id as id, s.name as sname, u.name as tname from class c, subject s, user u, class_member cm where cm.sid=${sqlCon.escape(
+			//@ts-ignore
+			req.session.uid
+		)} and c.sid=s.id and c.teacher_id=u.id and cm.cid=c.id  `;
+	if (query.length == 0) return res.sendStatus(403);
+	if (sortby) query += `order by ${sortby} `;
+	if (orderby) query += `${orderby} `;
+	if (limit) query += `limit ${parseInt(limit as string)} `;
+	if (skip) query += `offset ${parseInt(skip as string)} `;
+	sqlCon.query(query, (err: any, result: any) => {
+		if (err) return res.status(400).json(err);
+		res.json(result);
+	});
 }
 //class teacher
 export function addMember(req: Request, res: Response) {
-	const { sid, id } = req.body;
+	const { id } = req.params;
+	const { sid } = req.body;
 	const sqlCon: mysql.Connection = req.app.locals.sqlCon;
-	//@ts-ignore
-	sqlCon.query('insert into class_member values (?, ?)', [sid, cid], (err: any, result: any) => {
+
+	sqlCon.query('insert into class_member(sid,cid) values (?, ?)', [sid, id], (err: any, result: any) => {
 		if (err) return res.status(400).json(err);
 		return res.json({ msg: 'ok' });
 	});
@@ -93,23 +95,21 @@ export function addMember(req: Request, res: Response) {
 export function removeMember(req: Request, res: Response) {
 	const { id, sid } = req.params;
 	const sqlCon: mysql.Connection = req.app.locals.sqlCon;
-	//@ts-ignore
+
 	sqlCon.query('delete from class_member where sid=? and cid=?', [sid, id], (err: any, result: any) => {
 		if (err) return res.status(400).json(err);
 		return res.json({ msg: 'ok' });
 	});
 }
 export function listMember(req: Request, res: Response) {
-	let { skip, limit, orderby, sortby } = req.query;
+	let { orderby, sortby } = req.query;
 	let { id } = req.params;
 
 	const sqlCon: mysql.Connection = req.app.locals.sqlCon;
 
-	let query = `select u.id, u.name, u.gender, u.dob, u.phone from class_member cm, user u where cm.cid=${id} and cm.sid=u.id `;
+	let query = `select u.id, u.name, u.gender, u.dob, u.phone, cm.score from class_member cm, user u where cm.cid=${id} and cm.sid=u.id `;
 	if (sortby) query += `order by ${sortby} `;
 	if (orderby) query += `${orderby} `;
-	if (limit) query += `limit ${parseInt(limit as string)} `;
-	if (skip) query += `offset ${parseInt(skip as string)} `;
 	sqlCon.query(query, (err: any, result: any) => {
 		if (err) return res.status(400).json(err);
 		res.json(result);
@@ -155,7 +155,7 @@ export function listTime(req: Request, res: Response) {
 	});
 }
 export function removeTime(req: Request, res: Response) {
-	const { id, tid } = req.params;
+	const { tid } = req.params;
 	const sqlCon: mysql.Connection = req.app.locals.sqlCon;
 	//@ts-ignore
 	sqlCon.query('delete from class_time where id=?', [tid], (err: any, result: any) => {

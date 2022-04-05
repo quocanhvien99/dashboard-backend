@@ -19,7 +19,7 @@ const route = Router();
 route.post('/login', userController.login);
 route.get('/logout', userController.logout);
 route.post('/', upload.single('profile_pic'), userController.singup);
-route.get('/', isAdmin, userController.list);
+route.get('/', userController.list);
 route.put('/:id', upload.single('profile_pic'), userController.update);
 route.get('/:id', userController.getuser);
 route.delete('/:id', userController.removeuser);
