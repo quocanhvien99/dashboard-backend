@@ -26,7 +26,8 @@ export function singup(req: Request, res: Response) {
 			fields.push('profile_pic');
 			values.push(sqlCon.escape(`/img/profile/${req.file.filename}`));
 		}
-
+		fields.push('create_at');
+		values.push(sqlCon.escape(new Date().toISOString().replace('T', ' ').replace('Z', '')));
 		sqlCon.query(`insert into user(${fields.join(',')}) values (${values.join(',')})`, (err: any, result: any) => {
 			if (err) return res.status(400).json(err);
 			res.status(201).json({ msg: 'ok' });

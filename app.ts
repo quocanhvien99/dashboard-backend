@@ -10,7 +10,10 @@ import departmentRoute from './routes/department';
 import classRoute from './routes/class';
 import scoreRoute from './routes/score';
 import subjectRoute from './routes/subject';
+import timetableRoute from './routes/timetable';
+import statisticRoute from './routes/statistic';
 import cors from 'cors';
+import saveActivity from './middleware/saveActivity';
 
 declare module 'express-session' {
 	export interface SessionData {
@@ -51,11 +54,15 @@ app.locals.sqlCon = mysql.createConnection({
 	database: process.env.MYSQL_DATABASE,
 });
 
+app.use(saveActivity);
+
 app.use('/user', userRoute);
 app.use('/department', departmentRoute);
 app.use('/subject', subjectRoute);
 app.use('/class', classRoute);
 app.use('/score', scoreRoute);
+app.use('/timetable', timetableRoute);
+app.use('/statistic', statisticRoute);
 
 app.use(express.static('./public'));
 

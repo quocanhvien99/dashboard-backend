@@ -12,11 +12,11 @@ export function update(req: Request, res: Response) {
 }
 export function list(req: Request, res: Response) {
 	const sqlCon: mysql.Connection = req.app.locals.sqlCon;
-	const { skip, limit, orderby, sortby, cid } = req.query;
+	const { skip, limit, orderby, sortby } = req.query;
 	let query = '';
-	query = `select count(*) OVER() as total, score, c.semester, su.name as subjectName from score s, class c, subject su where s.cid=c.id and c.sid=su.id and s.uid=${sqlCon.escape(
+	query = `select count(*) OVER() as total, cm.score, s.name as subjectName, c.semester from class_member cm, class c, subject s where cm.score is not null and cm.sid=${sqlCon.escape(
 		req.session.uid
-	)} `;
+	)} and cm.cid=c.id and c.sid=s.id `;
 	if (sortby) query += `order by ${sortby} `;
 	if (orderby) query += `${orderby} `;
 	if (limit) query += `limit ${parseInt(limit as string)} `;
