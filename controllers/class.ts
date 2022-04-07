@@ -127,6 +127,7 @@ export function addTime(req: Request, res: Response) {
 		(err: any, result: any) => {
 			if (err) return res.status(400).json(err);
 			if (result.length) return res.status(400).json({ error: 'Trùng lịch dạy' });
+
 			sqlCon.query(
 				'insert into class_time(start, end, cid) values (?, ?, ?)',
 				[start, end, cid],
@@ -139,7 +140,7 @@ export function addTime(req: Request, res: Response) {
 	);
 }
 export function listTime(req: Request, res: Response) {
-	let { skip, limit, start, end } = req.query;
+	let { skip, limit, start, end, orderby, sortby } = req.query;
 	let { id } = req.params;
 
 	const sqlCon: mysql.Connection = req.app.locals.sqlCon;
@@ -147,6 +148,8 @@ export function listTime(req: Request, res: Response) {
 	let query = `select * from class_time where cid=${sqlCon.escape(id)} `;
 	if (start) query += `and start >= ${sqlCon.escape(start)} `;
 	if (end) query += `and end <= ${end} `;
+	if (sortby) query += `order by ${sortby} `;
+	if (orderby) query += `${orderby} `;
 	if (limit) query += `limit ${parseInt(limit as string)} `;
 	if (skip) query += `offset ${parseInt(skip as string)} `;
 	sqlCon.query(query, (err: any, result: any) => {
