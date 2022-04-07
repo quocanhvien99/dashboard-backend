@@ -2,7 +2,7 @@ import { Router } from 'express';
 import * as userController from '../controllers/user';
 import multer from 'multer';
 import path from 'path';
-import isAdmin from '../middleware/isAdmin';
+import auth from '../middleware/auth';
 
 const storage = multer.diskStorage({
 	destination: (req, file, cb) => {
@@ -19,9 +19,9 @@ const route = Router();
 route.post('/login', userController.login);
 route.get('/logout', userController.logout);
 route.post('/', upload.single('profile_pic'), userController.singup);
-route.get('/', userController.list);
-route.put('/:id', upload.single('profile_pic'), userController.update);
-route.get('/:id', userController.getuser);
-route.delete('/:id', userController.removeuser);
+route.get('/', auth, userController.list);
+route.put('/:id', auth, upload.single('profile_pic'), userController.update);
+route.get('/:id', auth, userController.getuser);
+route.delete('/:id', auth, userController.removeuser);
 
 export default route;

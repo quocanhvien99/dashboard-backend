@@ -1,13 +1,14 @@
 import { Router } from 'express';
 import * as subjectController from '../controllers/subject';
 import subjectMiddleware from '../middleware/subject';
+import auth from '../middleware/auth';
 
 const route = Router();
 
-route.post('/', subjectMiddleware, subjectController.add);
-route.get('/', subjectMiddleware, subjectController.list);
-route.put('/:id', subjectMiddleware, subjectController.update);
-route.get('/:id', subjectMiddleware, subjectController.getsubject);
-route.delete('/:id', subjectMiddleware, subjectController.remove);
+route.post('/', auth, subjectMiddleware, subjectController.add);
+route.get('/', auth, subjectMiddleware, subjectController.list);
+route.put('/:id', auth, subjectMiddleware, subjectController.update);
+route.get('/:id', auth, subjectMiddleware, subjectController.getsubject);
+route.delete('/:id', auth, subjectMiddleware, subjectController.remove);
 
 export default route;

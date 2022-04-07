@@ -22,16 +22,16 @@ export function getActivityStatistic(req: Request, res: Response) {
 	const { year } = req.query;
 	const sqlCon: mysql.Connection = req.app.locals.sqlCon;
 	sqlCon.query(
-		'select year(a.at) year, month(a.at) month, u.role, count(*) total from activity a, user u where a.uid=u.id group by year, month, u.role having year=?',
+		'select year(a.at) year, month(a.at) month, u.role, count(distinct(a.uid)) total from activity a, user u where a.uid=u.id group by year, month, u.role having year=?',
 		[year],
 		(err: any, result: any) => {
 			if (err) return res.status(400).json(err);
-			let data: any = { admin: [], student: [] };
+			let data: any = { teacher: [], student: [], admin: [] };
 			result.map((x: { month: string; role: string; total: number }, i: number) => {
 				data[x.role][i] = x.total;
 			});
 			for (let i = 0; i < 12; i++) {
-				data.admin[i] = data.admin[i] ? data.admin[i] : 0;
+				data.teacher[i] = data.teacher[i] ? data.teacher[i] : 0;
 				data.student[i] = data.student[i] ? data.student[i] : 0;
 			}
 			res.json(data);

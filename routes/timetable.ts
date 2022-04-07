@@ -1,8 +1,9 @@
 import { Router } from 'express';
 import * as timetableController from '../controllers/timetable';
+import auth from '../middleware/auth';
 
 const route = Router();
 
-route.get('/', timetableController.listTime);
+route.get('/', auth, timetableController.listTime);
 
 export default route;
