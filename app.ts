@@ -26,6 +26,7 @@ const app = express();
 
 const RedisStore = connectRedis(session);
 const redisClient = new Redis();
+app.locals.redisClient = redisClient;
 app.use(
 	session({
 		store: new RedisStore({ client: redisClient }),

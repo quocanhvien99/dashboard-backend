@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import bcrypt from 'bcrypt';
 import mysql from 'mysql2';
+import * as sendMail from '../send';
 
 export function singup(req: Request, res: Response) {
 	const { email } = req.body;
@@ -60,38 +61,41 @@ export function update(req: Request, res: Response) {
 		return res.sendStatus(403);
 	}
 	const sqlCon = req.app.locals.sqlCon;
-	let cols = '';
-	if (req.file) {
-		cols += `profile_pic="/img/profile/${req.file.filename}", `;
-	}
-	for (let key in req.body) {
-		let value: string;
-		//change password
-		if (key == 'oldPassword') continue;
-		if (key == 'password') {
-			const { oldPassword, password } = req.body;
-			if (
-				req.session.role !== 'admin' && //@ts-ignore
-				(id !== req.session.uid || !bcrypt.compareSync(oldPassword, result[0].password))
-			) {
-				return res.status(403).json({ msg: 'Thông tin không chính xác!' });
-			}
-			value = sqlCon.escape(bcrypt.hashSync(password, 10));
-		} else {
-			value = sqlCon.escape(req.body[key]);
+	sqlCon.query('select * from user where id=? ', [id], (err: any, result: any) => {
+		if (err) return res.status(400).json(err);
+		let cols = '';
+		if (req.file) {
+			cols += `profile_pic="/img/profile/${req.file.filename}", `;
 		}
+		for (let key in req.body) {
+			let value: string;
+			//change password
+			if (key == 'oldPassword') continue;
+			if (key == 'password') {
+				const { oldPassword, password } = req.body;
+				if (
+					req.session.role !== 'admin' && //@ts-ignore
+					(id !== req.session.uid!.toString() || !bcrypt.compareSync(oldPassword, result[0].password))
+				) {
+					return res.status(403).json({ msg: 'Thông tin không chính xác!' });
+				}
+				value = sqlCon.escape(bcrypt.hashSync(password, 10));
+			} else {
+				value = sqlCon.escape(req.body[key]);
+			}
 
-		cols += `${key}=${value}, `;
-	}
-	cols = cols.slice(0, cols.length - 2);
-	if (cols.length !== 0) {
-		sqlCon.query(`update user set ${cols} where id=${sqlCon.escape(id)}`, (err: any, result: any) => {
-			if (err) return res.status(400).json(err);
-			return res.json({ msg: 'ok' });
-		});
-	} else {
-		res.json({ msg: 'ok' });
-	}
+			cols += `${key}=${value}, `;
+		}
+		cols = cols.slice(0, cols.length - 2);
+		if (cols.length !== 0) {
+			sqlCon.query(`update user set ${cols} where id=${sqlCon.escape(id)}`, (err: any, result: any) => {
+				if (err) return res.status(400).json(err);
+				return res.json({ msg: 'ok' });
+			});
+		} else {
+			res.json({ msg: 'ok' });
+		}
+	});
 }
 export function list(req: Request, res: Response) {
 	let { s, skip, limit, orderby, sortby, role } = req.query;
@@ -137,5 +141,36 @@ export function removeuser(req: Request, res: Response) {
 	sqlCon.query(`delete from user where id=?`, [id], (err: any, result: any) => {
 		if (err) return res.status(400).json(err);
 		res.json({ msg: 'ok' });
+	});
+}
+export async function forgetPassword(req: Request, res: Response) {
+	const { email } = req.body;
+	let activationCode: any = Math.round(Math.random() * 9999);
+	activationCode = activationCode.toString();
+	let zeros: any = [];
+	for (let i = 0; i < 4 - activationCode.length; i++) zeros.push('0');
+	zeros = zeros.join('');
+	activationCode = zeros + activationCode;
+	res.app.locals.redisClient.hset('forgetCode', email, activationCode);
+	sendMail.forgetCode(email, activationCode);
+	res.json({ msg: 'Ok' });
+}
+export async function resetPassword(req: Request, res: Response) {
+	const { email, code, password } = req.body;
+
+	res.app.locals.redisClient.hget('forgetCode', email, (err: any, exactCode: any) => {
+		if (exactCode != code) {
+			return res.status(400).json({ msg: 'Code is wrong' });
+		}
+		res.app.locals.redisClient.hdel('forgetCode', email);
+		const sqlCon: mysql.Connection = req.app.locals.sqlCon;
+		sqlCon.query(
+			'update user set password=? where email=?',
+			[bcrypt.hashSync(password, 10), email],
+			(err: any, result: any) => {
+				if (err) return res.status(400).json(err);
+				res.json({ msg: 'Password changed' });
+			}
+		);
 	});
 }
