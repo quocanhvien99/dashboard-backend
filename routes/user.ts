@@ -23,5 +23,7 @@ route.get('/', auth, userController.list);
 route.put('/:id', auth, upload.single('profile_pic'), userController.update);
 route.get('/:id', auth, userController.getuser);
 route.delete('/:id', auth, userController.removeuser);
+route.post('/forget', userController.forgetPassword);
+route.post('/reset', userController.resetPassword);
 
 export default route;
